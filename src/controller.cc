@@ -62,6 +62,15 @@ std::pair<uint64_t, int> Controller::ReturnDoneTrans(uint64_t clk) {
     return std::make_pair(-1, -1);
 }
 
+Address Controller::ReturnACT(uint64_t clk) {
+    if (act_queue_.begin() != act_queue_.end()) {
+        auto act = *act_queue_.begin();
+        act_queue_.erase(act_queue_.begin());
+        return act;
+    }
+    return Address();
+}
+
 void Controller::ClockTick() {
     // update refresh counter
     refresh_.ClockTick();
@@ -197,9 +206,9 @@ bool Controller::AddTransaction(Transaction trans) {
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
     if (write_draining_ == 0 && !is_unified_queue_) {
-        // we basically have a upper and lower threshold for write buffer
-        if ((write_buffer_.size() >= write_buffer_.capacity()) ||
-            (write_buffer_.size() > 8 && cmd_queue_.QueueEmpty())) {
+        // we basically have an upper and lower threshold for write buffer
+        if ((write_buffer_.size() >= 7*write_buffer_.capacity()/8) ||
+            (write_buffer_.size() > write_buffer_.capacity()/2 && cmd_queue_.QueueEmpty())) {
             write_draining_ = write_buffer_.size();
         }
     }
@@ -259,6 +268,10 @@ void Controller::IssueCommand(const Command &cmd) {
         auto wr_lat = clk_ - it->second.added_cycle + config_.write_delay;
         simple_stats_.AddValue("write_latency", wr_lat);
         pending_wr_q_.erase(it);
+    } else if (cmd.cmd_type == CommandType::ACTIVATE) {
+        act_queue_.push_back(Address(channel_id_, cmd.Rank(), 0, 
+                                    (8*cmd.Bank() + cmd.Bankgroup()), 
+                                    cmd.Row(), 0));
     }
     // must update stats before states (for row hits)
     UpdateCommandStats(cmd);

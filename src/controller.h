@@ -36,6 +36,7 @@ class Controller {
     void PrintFinalStats();
     void ResetStats() { simple_stats_.Reset(); }
     std::pair<uint64_t, int> ReturnDoneTrans(uint64_t clock);
+    Address ReturnACT(uint64_t clock);
 
     int channel_id_;
 
@@ -63,6 +64,7 @@ class Controller {
 
     // completed transactions
     std::vector<Transaction> return_queue_;
+    std::vector<Address> act_queue_;
 
     // row buffer policy
     RowBufPolicy row_buf_policy_;

@@ -37,6 +37,14 @@ void MemorySystem::RegisterCallbacks(
     dram_system_->RegisterCallbacks(read_callback, write_callback);
 }
 
+void MemorySystem::RegisterACTCallback(
+    std::function<void(uint64_t, 
+                        uint64_t, 
+                        uint64_t,
+                        uint64_t)> act_callback) {
+    dram_system_->RegisterACTCallback(act_callback);
+}
+
 bool MemorySystem::WillAcceptTransaction(uint64_t hex_addr,
                                          bool is_write) const {
     return dram_system_->WillAcceptTransaction(hex_addr, is_write);

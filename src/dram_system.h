@@ -24,6 +24,10 @@ class BaseDRAMSystem {
     virtual ~BaseDRAMSystem() {}
     void RegisterCallbacks(std::function<void(uint64_t)> read_callback,
                            std::function<void(uint64_t)> write_callback);
+    void RegisterACTCallback(std::function<void(uint64_t, 
+                                                uint64_t, 
+                                                uint64_t,
+                                                uint64_t)> act_callback);
     void PrintEpochStats();
     void PrintStats();
     void ResetStats();
@@ -35,6 +39,8 @@ class BaseDRAMSystem {
     int GetChannel(uint64_t hex_addr) const;
 
     std::function<void(uint64_t req_id)> read_callback_, write_callback_;
+    std::function<void(uint64_t ch, uint64_t ra, 
+                    uint64_t ba, uint64_t ro)> act_callback_;
     static int total_channels_;
 
    protected:

@@ -69,6 +69,10 @@ struct Command {
     Command() : cmd_type(CommandType::SIZE), hex_addr(0) {}
     Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr)
         : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr) {}
+    Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr,
+            bool reqd_ACT)
+        : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr), 
+          reqd_ACT(reqd_ACT) {}
     // Command(const Command& cmd) {}
 
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
@@ -92,6 +96,7 @@ struct Command {
     }
     CommandType cmd_type;
     Address addr;
+    bool reqd_ACT = false;
     uint64_t hex_addr;
 
     int Channel() const { return addr.channel; }
@@ -110,6 +115,8 @@ struct Transaction {
         : addr(addr),
           added_cycle(0),
           complete_cycle(0),
+          CRA_idx(0),
+          is_ACT(false),
           is_write(is_write) {}
     Transaction(const Transaction& tran)
         : addr(tran.addr),
@@ -119,6 +126,8 @@ struct Transaction {
     uint64_t addr;
     uint64_t added_cycle;
     uint64_t complete_cycle;
+    uint64_t CRA_idx;
+    bool is_ACT;
     bool is_write;
 
     friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);

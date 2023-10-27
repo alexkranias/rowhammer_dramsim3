@@ -93,6 +93,14 @@ void BaseDRAMSystem::RegisterCallbacks(
     write_callback_ = write_callback;
 }
 
+void BaseDRAMSystem::RegisterACTCallback(
+    std::function<void(uint64_t, 
+                        uint64_t, 
+                        uint64_t,
+                        uint64_t)> act_callback) {
+    act_callback_ = act_callback;
+}
+
 JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
@@ -154,6 +162,16 @@ void JedecDRAMSystem::ClockTick() {
             } else if (pair.second == 0) {
                 read_callback_(pair.first);
             } else {
+                break;
+            }
+        }
+        while (true) {
+            auto actAddr = ctrls_[i]->ReturnACT(clk_);
+            if (actAddr.row != -1) {
+                act_callback_(actAddr.channel, actAddr.rank,
+                                actAddr.bank, actAddr.row);
+            }
+            else {
                 break;
             }
         }

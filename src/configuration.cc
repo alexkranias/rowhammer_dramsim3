@@ -59,6 +59,12 @@ void Config::CalculateSize() {
         ranks = channel_size / megs_per_rank;
         channel_size = ranks * megs_per_rank;
     }
+
+    std::cout << "[DRAMSim3 Config] devices_per_rank " << devices_per_rank 
+                << " page_size " << page_size << " megs_per_bank " << megs_per_bank
+                << " megs_per_rank " << megs_per_rank << " ranks " << ranks 
+                << " channel_size " << channel_size << " channels " << channels << std::endl;
+    std::cout << "[BUILT FOR ART_RH]" << std::endl;
     return;
 }
 
@@ -348,6 +354,7 @@ void Config::SetAddressMapping() {
     // memory addresses are byte addressable, but each request comes with
     // multiple bytes because of bus width, and burst length
     request_size_bytes = bus_width / 8 * BL;
+    std::cout << "Block size in DRAMSim3: " << request_size_bytes << std::endl;
     shift_bits = LogBase2(request_size_bytes);
     int col_low_bits = LogBase2(BL);
     int actual_col_bits = LogBase2(columns) - col_low_bits;

@@ -18,7 +18,9 @@ class CPU {
               std::bind(&CPU::WriteCallBack, this, std::placeholders::_1)),
           clk_(0) {}
     virtual void ClockTick() = 0;
-    void ReadCallBack(uint64_t addr) { return; }
+    void ReadCallBack(uint64_t addr) { 
+        std::cout << "Rd complete for " << addr << " at clk " << clk_ << std::endl;
+    }
     void WriteCallBack(uint64_t addr) { return; }
     void PrintStats() { memory_system_.PrintStats(); }
 
