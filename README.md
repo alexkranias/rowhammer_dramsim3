@@ -1,158 +1,155 @@
-[![Build Status](https://travis-ci.com/umd-memsys/DRAMsim3.svg?branch=master)](https://travis-ci.com/umd-memsys/DRAMsim3)
+# START: Scalable Tracking for Any Rowhammer Threshold
 
-# About DRAMsim3
+This repository is part of the evaluation artifact for the [START](https://arxiv.org/abs/2308.14889) paper, which will appear at [HPCA 2024](https://www.hpca-conf.org/2024/). 
 
-DRAMsim3 models the timing paramaters and memory controller behavior for several DRAM protocols such as DDR3, DDR4, LPDDR3, LPDDR4, GDDR5, GDDR6, HBM, HMC, STT-MRAM. It is implemented in C++ as an objected oriented model that includes a parameterized DRAM bank model, DRAM controllers, command queues and system-level interfaces to interact with a CPU simulator (GEM5, ZSim) or trace workloads. It is designed to be accurate, portable and parallel.
-    
-If you use this simulator in your work, please consider cite:
+## Introduction
 
-[1] S. Li, Z. Yang, D. Reddy, A. Srivastava and B. Jacob, "DRAMsim3: a Cycle-accurate, Thermal-Capable DRAM Simulator," in IEEE Computer Architecture Letters. [Link](https://ieeexplore.ieee.org/document/8999595)
+Experiments in the START paper are conducted using [ChampSim](https://github.com/ChampSim/ChampSim), a cycle-level multi-core simulator, interfaced with [DRAMSim3](https://github.com/umd-memsys/DRAMsim3), a detailed memory system simulator. The trace download and jobfile management is borrowed from the infrastructure used in [Pythia](https://github.com/CMU-SAFARI/Pythia). Accordingly, the code and experimentation framework of START has been partitioned into 3 repositories for modularity. 
 
-See [Related Work](#related-work) for more work done with this simulator.
+This repository hosts the ChampSim simulator codebase for START, Hydra, and Ideal trackers using victim-refresh mitigation with configurable blast-radius. 
 
+**NOTE:** The documentation is common across all 3 repositories, so feel free to start here.
 
-## Building and running the simulator
+## System Requirements
 
-This simulator by default uses a CMake based build system.
-The advantage in using a CMake based build system is portability and dependency management.
-We require CMake 3.0+ to build this simulator.
-If `cmake-3.0` is not available,
-we also supply a Makefile to build the most basic version of the simulator.
+   - **SW Dependencies** 
+     - Tested with cmake v3.23.1, g++ v10.3.0, md5sum v8.22, perl v5.16.3, megatools 1.11.0, and Python XYZ.
+   - **Benchmark Dependencies** 
+     - Publicly available ChampSim-compatible traces of SPEC2017, LIGRA, PARSEC, and CloudSuite workloads.
+   - **HW Dependencies** 
+     - A scale-out system like many-core server or HPC cluster.
+     - Our experiments were performed on the [PACE](https://pace.gatech.edu) cluster at Georgia Tech.
+     - Most configurations run simulations for 28 workloads for about 6 hours on average (with one workload per core). Some configurations run 51 workloads per configurations.
+     - Overall, there are 48 configurations, requiring about 9,000 core-hours to replicate all results (about 1-2 days on four 64-core servers).
 
-### Building
+**NOTE:** If compute resources are limited, we consider the key results of the paper to be those displayed in Figure 6, 7, 8, 13, 14, and 16, which corresponds to 16 configurations, requiring about 3,600 core-hours (about 1-2 days on a 64-core server).
 
-Doing out of source builds with CMake is recommended to avoid the build files cluttering the main directory.
+## Compilation Steps
 
-```bash
-# cmake out of source build
-mkdir build
-cd build
-cmake ..
-
-# Build dramsim3 library and executables
-make -j4
-
-# Alternatively, build with thermal module enabled
-cmake .. -DTHERMAL=1
+The expected directory structure is:
 
 ```
-
-The build process creates `dramsim3main` and executables in the `build` directory.
-By default, it also creates `libdramsim3.so` shared library in the project root directory.
-
-### Running
-
-```bash
-# help
-./build/dramsim3main -h
-
-# Running random stream with a config file
-./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini --stream random -c 100000 
-
-# Running a trace file
-./build/dramsim3main configs/DDR4_8Gb_x8_3200.ini -c 100000 -t sample_trace.txt
-
-# Running with gem5
---mem-type=dramsim3 --dramsim3-ini=configs/DDR4_4Gb_x4_2133.ini
-
+start_hpca24_ae
+|-dramsim3
+|-champsim
+|-experiments
 ```
 
-The output can be directed to another directory by `-o` option
-or can be configured in the config file.
-You can control the verbosity in the config file as well.
+* `mkdir start_hpca24_ae`
 
-### Output Visualization
+### Build DRAMSim3
 
-`scripts/plot_stats.py` can visualize some of the output (requires `matplotlib`):
+* `git clone https://github.com/Anish-Saxena/rowhammer_dramsim3 dramsim3`
+* `cd dramsim3`
+* `mkdir build && cd build && cmake ..`
+* `make -j8`
+* `cd ..`
 
-```bash
-# generate histograms from overall output
-python3 scripts/plot_stats dramsim3.json
+### Setup ChampSim Build Environment
 
-# or
-# generate time series for a variety stats from epoch outputs
-python3 scripts/plot_stats dramsim3epoch.json
-```
+* `git clone https://github.com/Anish-Saxena/rowhammer_champsim champsim`
+* `cd champsim`
+*  `./set_paths.sh`
 
-Currently stats from all channels are squashed together for cleaner plotting.
+### Compile One Configuration for Testing
 
-### Integration with other simulators
+* `./config.py configs/8C_16W.json`
+* `make -j8`
+* `cd ..`
 
-**Gem5** integration: works with a forked Gem5 version, see https://github.com/umd-memsys/gem5 at `dramsim3` branch for reference.
+Ensure that the compilation completes without error. 
 
-**SST** integration: see http://git.ece.umd.edu/shangli/sst-elements/tree/dramsim3 for reference. We will try to merge to official SST repo.
+**Common Error**: The compiler may not be able to link the dramsim3 library. If so, check that the path is correctly set in `config.py` (search for LDLIBS). 
 
-**ZSim** integration: see http://git.ece.umd.edu/shangli/zsim/tree/master for reference.
+### Download Traces
 
-## Simulator Design
+* `git clone https://github.com/Anish-Saxena/rowhammer_pythia experiments`
+* `cd experiments`
+* `source setvars.sh`
+* `mkdir traces`
+* `cd scripts/`
+* `perl download_traces.pl --csv START_traces.csv --dir ../traces/`
+* `cd ../traces/`
+* `md5sum -c ../scripts/START_traces.md5`
+* `cd ../../`
 
-### Code Structure
+The 44 traces might take an hour or more to download, depending both on the host network bandwidth and bandwidth allocation provided by Megatools (for LIGRA and PARSEC traces). Ensure that the checksum passes for all traces.
 
-```
-├── configs                 # Configs of various protocols that describe timing constraints and power consumption.
-├── ext                     # 
-├── scripts                 # Tools and utilities
-├── src                     # DRAMsim3 source files
-├── tests                   # Tests of each model, includes a short example trace
-├── CMakeLists.txt
-├── Makefile
-├── LICENSE
-└── README.md
+**Common Error**: If Megatools does not work, download the latest megatools utility for the relevant platform from [Megatools Builds](https://megatools.megous.com/builds/builds/), untar it (`tar -xvf <filename`), and update the `megatool_exe` parameter in `download_traces.pl`.
 
-├── src  
-    bankstate.cc: Records and manages DRAM bank timings and states which is modeled as a state machine.
-    channelstate.cc: Records and manages channel timings and states.
-    command_queue.cc: Maintains per-bank or per-rank FIFO queueing structures, determine which commands in the queues can be issued in this cycle.
-    configuration.cc: Initiates, manages system and DRAM parameters, including protocol, DRAM timings, address mapping policy and power parameters.
-    controller.cc: Maintains the per-channel controller, which manages a queue of pending memory transactions and issues corresponding DRAM commands, 
-                   follows FR-FCFS policy.
-    cpu.cc: Implements 3 types of simple CPU: 
-            1. Random, can handle random CPU requests at full speed, the entire parallelism of DRAM protocol can be exploited without limits from address mapping and scheduling pocilies. 
-            2. Stream, provides a streaming prototype that is able to provide enough buffer hits.
-            3. Trace-based, consumes traces of workloads, feed the fetched transactions into the memory system.
-    dram_system.cc:  Initiates JEDEC or ideal DRAM system, registers the supplied callback function to let the front end driver know that the request is finished. 
-    hmc.cc: Implements HMC system and interface, HMC requests are translates to DRAM requests here and a crossbar interconnect between the high-speed links and the memory controllers is modeled.
-    main.cc: Handles the main program loop that reads in simulation arguments, DRAM configurations and tick cycle forward.
-    memory_system.cc: A wrapper of dram_system and hmc.
-    refresh.cc: Raises refresh request based on per-rank refresh or per-bank refresh.
-    timing.cc: Initiate timing constraints.
-```
+### Update LD_LIBARY_PATH
 
-## Experiments
+DRAMSim3 is loaded as a dynamically linked library and requires updating `LD_LIBRARY_PATH` variable. We recommend appending the updated variable to `bashrc` as well as all job-files used to launch experiments.
 
-### Verilog Validation
+- Update `LD_LIBRARY_PATH` in current terminal session: `export LD_LIBRARY_PATH=<path-to-dramsim3-directory>:$LD_LIBRARY_PATH`
+- Append updated variable to bashrc: `echo "export LD_LIBRARY_PATH=<path-to-dramsim3-directory>:$LD_LIBRARY_PATH" >> ~/.bashrc`
 
-First we generate a DRAM command trace.
-There is a `CMD_TRACE` macro and by default it's disabled.
-Use `cmake .. -DCMD_TRACE=1` to enable the command trace output build and then
-whenever a simulation is performed the command trace file will be generated.
+### Test Setup with Dummy Run
 
-Next, `scripts/validation.py` helps generate a Verilog workbench for Micron's Verilog model
-from the command trace file.
-Currently DDR3, DDR4, and LPDDR configs are supported by this script.
+* `cd champsim`
+* `./test_setup.sh`
 
-Run
+Running this trace for 100K warmup and 100K simulation instructions should take about a minute. Ensure that the simulation completes successfully; you will see the message `SETUP TESTED SUCCESSFULLY` at the end of the output.
 
-```bash
-./script/validataion.py DDR4.ini cmd.trace
-```
+**Common Error:** If the loader is unable to find the dramsim3 library, please ensure the updated `LD_LIBRARY_PATH` variable is available in the execution environment (for example, if srun-like commands are used). 
 
-To generage Verilog workbench.
-Our workbench format is compatible with ModelSim Verilog simulator,
-other Verilog simulators may require a slightly different format.
+## Experimental Workflow
+
+START adopts [Pythia's](https://github.com/CMU-SAFARI/Pythia) experimental workflow by launching experiments preferably on an HPC compute cluster followed by rolling up statistics.
+
+Each configuration runs either 28 workloads (used in the main apper) or all 51 workloads (used in appendix). Overall, there are 48 configurations required to recreate all figures in the paper, and 16 configurations to recreate the representative figures.
+
+### Build ChampSim Configurations
+
+1. `cd champsim`
+2. If recreating all figures, `./build_configs.sh configs/all_figures.configs`. Otherwise, `./build_configs.sh configs/representative_figures.configs`.
+
+### Launch Experiments
+
+Recreating all figures requires 1528 experiment runs (each requiring one core and 4GB memory). Recreating representative figures requires 609 experiments runs. Each experiment requires 6 core-hours on average, or about 9K core-hours to recreate all experiments and 3.6K core-hours to recreate representative experiments. 
+
+1. Select whether you will recreate all figures or only representative figures and check out `experiments/experiments/all_figures/` or `experiments/experiments/representative_figures/` directory, respectively. 
+2. The `configure.csv` file provides details about each configuration (best viewed in Google Sheets/ Excel).
+
+The directories for each required configuration have already been set up. Next, make any changes necessary to run the configuration on your machine. **Refer to options below before proceeding to next steps.**
+
+#### Option-1: Using Slurm
+
+The sample jobfile within each directory assumes usage of `slurm` scheduler (typically when using an HPC cluster). For each configuration, the only difference in jobfiles is the ChampSim binary used, so all jobfiles are created using the following 3 jobfiles:
+
+- `experiments/experiments/1C_all_workloads.sh`: Baseline single-core experiments used to compute weighted speedup. 44 workloads.
+- `experiments/experiments/single_workloads.sh`: Multi-core experiments with same workload on each core. 28 workloads.
+- `experiments/experiments/all_workloads.sh`: All multi-core experiments (single, mixed, cloudsuite). 51 workloads.
+
+We recommend making any changes to these three jobfiles (such as specifying the charge account for `slurm`, etc.), as required. Alternatively, try running a jobfile inside a directory within `experiments/experiments/all_figures/` to ensure it works (for example, `cd 8C_16WLLC && sbatch jobfile.sh`).
+
+#### Option-2: Running Locally
+
+Similar to the `slurm` option, we provide three jobfiles from which all configuration jobfiles can be derived:
+
+- `experiments/experiments/1C_all_workloads.local.sh`: Baseline single-core experiments used to compute weighted speedup. 44 workloads.
+- `experiments/experiments/single_workloads.local.sh`: Multi-core experiments with same workload on each core. 28 workloads.
+- `experiments/experiments/all_workloads.local.sh`: All multi-core experiments (single, mixed, cloudsuite). 51 workloads.
+
+We recommend making any changes to these three jobfiles as required. Alternatively, try running a jobfile inside a directory within `experiments/experiments/all_figures/` to ensure it works (for example, `cd 8C_16WLLC && ./jobfile.sh`).
+
+#### Option-3: Create Your Own Jobfiles
+
+Please customize `create_jobfile.pl` to create jobfiles to the format needed for launching experiments on your machine. Create the new jobfile comprising all experiments using the following command:
+
+`perl ../scripts/create_jobfile.pl --exe $PYTHIA_HOME/../champsim/bin/8C_16WLLC --tlist START_8C_ALL.tlist --exp START.exp --local 1 > single_workloads.local.sh`
+
+Note that you need to create jobfiles for 8-core all-workloads (`START_8C_ALL.tlist`), 8-core single-workloads (`START_8C_SINGLE.tlist`), and 1-core all-workloads (`START_1C_ALL.tlist`). Be sure to following the jobfile naming convention discussed in Option-2. 
+
+**After referring to options above, proceed with launching experiments below.**
+
+3. After making changes, run `./setup_exps.sh` to recreate jobfiles for all configurations.
+
+4. Finally, launch experiments. 
+    * **Option-1**: We provide a helper script `launch_exps.sh` that launches all experiments using the `sbatch` command. 
+    * **Option-2 or 3**: If running locally, please launch each configuration manually and ensure number of running experiments are less than number of cores at any given time (otherwise context switches can degrade performance).
 
 
-## Related Work
+## Collect Statistics
 
-[1] Li, S., Yang, Z., Reddy D., Srivastava, A. and Jacob, B., (2020) DRAMsim3: a Cycle-accurate, Thermal-Capable DRAM Simulator, IEEE Computer Architecture Letters.
-
-[2] Jagasivamani, M., Walden, C., Singh, D., Kang, L., Li, S., Asnaashari, M., ... & Yeung, D. (2019). Analyzing the Monolithic Integration of a ReRAM-Based Main Memory Into a CPU's Die. IEEE Micro, 39(6), 64-72.
-
-[3] Li, S., Reddy, D., & Jacob, B. (2018, October). A performance & power comparison of modern high-speed DRAM architectures. In Proceedings of the International Symposium on Memory Systems (pp. 341-353).
-
-[4] Li, S., Verdejo, R. S., Radojković, P., & Jacob, B. (2019, September). Rethinking cycle accurate DRAM simulation. In Proceedings of the International Symposium on Memory Systems (pp. 184-191).
-
-[5] Li, S., & Jacob, B. (2019, September). Statistical DRAM modeling. In Proceedings of the International Symposium on Memory Systems (pp. 521-530).
-
-[6] Li, S. (2019). Scalable and Accurate Memory System Simulation (Doctoral dissertation).
-
+Work-in-progress. 
