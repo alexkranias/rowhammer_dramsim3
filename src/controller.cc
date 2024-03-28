@@ -252,7 +252,6 @@ void Controller::IssueCommand(const Command &cmd) {
         }
         // if there are multiple reads pending return them all
         while (num_reads > 0) {
-            std::cerr << num_reads << std::endl;
             auto it = pending_rd_q_.find(cmd.hex_addr);
             it->second.complete_cycle = clk_ + config_.read_delay;
             return_queue_.push_back(it->second);
