@@ -31,6 +31,10 @@ int MemorySystem::GetBurstLength() const { return config_->BL; }
 
 int MemorySystem::GetQueueSize() const { return config_->trans_queue_size; }
 
+int MemorySystem::GetDeviceWidth() const { return config_->device_width; }
+
+int MemorySystem::GetColumns() const { return config_->columns; }
+
 void MemorySystem::RegisterCallbacks(
     std::function<void(uint64_t)> read_callback,
     std::function<void(uint64_t)> write_callback) {
@@ -39,6 +43,7 @@ void MemorySystem::RegisterCallbacks(
 
 void MemorySystem::RegisterACTCallback(
     std::function<void(uint64_t, 
+                        uint64_t, 
                         uint64_t, 
                         uint64_t,
                         uint64_t)> act_callback) {

@@ -18,12 +18,15 @@ class MemorySystem {
                            std::function<void(uint64_t)> write_callback);
     void RegisterACTCallback(std::function<void(uint64_t, 
                                                 uint64_t, 
+                                                uint64_t, 
                                                 uint64_t,
                                                 uint64_t)> act_callback);
     double GetTCK() const;
     int GetBusBits() const;
     int GetBurstLength() const;
     int GetQueueSize() const;
+    int GetDeviceWidth() const;
+    int GetColumns() const;
     void PrintStats() const;
     void ResetStats();
 

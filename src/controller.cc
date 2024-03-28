@@ -271,7 +271,7 @@ void Controller::IssueCommand(const Command &cmd) {
     } else if (cmd.cmd_type == CommandType::ACTIVATE) {
         act_queue_.push_back(Address(channel_id_, cmd.Rank(), 0, 
                                     (8*cmd.Bank() + cmd.Bankgroup()), 
-                                    cmd.Row(), 0));
+                                    cmd.Row(), cmd.Column()));
     }
     // must update stats before states (for row hits)
     UpdateCommandStats(cmd);

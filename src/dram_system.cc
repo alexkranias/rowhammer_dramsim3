@@ -96,6 +96,7 @@ void BaseDRAMSystem::RegisterCallbacks(
 void BaseDRAMSystem::RegisterACTCallback(
     std::function<void(uint64_t, 
                         uint64_t, 
+                        uint64_t, 
                         uint64_t,
                         uint64_t)> act_callback) {
     act_callback_ = act_callback;
@@ -169,7 +170,7 @@ void JedecDRAMSystem::ClockTick() {
             auto actAddr = ctrls_[i]->ReturnACT(clk_);
             if (actAddr.row != -1) {
                 act_callback_(actAddr.channel, actAddr.rank,
-                                actAddr.bank, actAddr.row);
+                                actAddr.bank, actAddr.row, actAddr.column);
             }
             else {
                 break;
